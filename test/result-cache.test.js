@@ -2,7 +2,6 @@
 const fs = require('fs')
 const express = require('express')
 const request = require('supertest')
-const getMemoryCache = require('./memory-cache')
 const getMockCache = require('./mock-cache')
 const resultCache = require('../')
 
