@@ -46,7 +46,14 @@ module.exports = config => {
 
     // Check if this item is in cache
     const storageParams = {urlPath, paramsHash, queryParams}
-    const cached = await storage.read(storageParams)
+    let cached
+
+    // Errors during cache fetch shouldn't be fatal
+    try {
+      cached = await storage.read(storageParams)
+    } catch (err) {
+      logger.error(err)
+    }
 
     // If we have a cached response, send it!
     if (cached) {
@@ -85,7 +92,9 @@ module.exports = config => {
     try {
       await storage.write(writeParams)
     } catch (err) {
-      logger.error(`Failed to write to result cache:\n${err.stack}`)
+      logger.error(
+        `Failed to write to result cache:\n${err.stack || err.message}`
+      )
     }
   }
 
