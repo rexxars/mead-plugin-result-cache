@@ -1,5 +1,7 @@
 # mead-plugin-result-cache
 
+[![npm version](http://img.shields.io/npm/v/mead-plugin-result-cache.svg?style=flat-square)](http://browsenpm.org/package/mead-plugin-result-cache)[![Build Status](http://img.shields.io/travis/rexxars/mead-plugin-result-cache/master.svg?style=flat-square)](https://travis-ci.org/rexxars/mead-plugin-result-cache)[![Dependency status](https://img.shields.io/david/rexxars/mead-plugin-result-cache.svg?style=flat-square)](https://david-dm.org/rexxars/mead-plugin-result-cache)
+
 Caches the result of transformations. Pluggable storage implementation.
 
 ## Installation
@@ -28,7 +30,7 @@ module.exports = {
 
 ## Storage adapters
 
-The `storage` takes an object with a `read` and a `write` function, each of which returns a promise.  
+The `storage` takes an object with a `read` and a `write` function, each of which returns a promise.
 A super-naive, in-memory implementation of this pattern (which should obviously never ever be used) looks something like this:
 
 ```js
