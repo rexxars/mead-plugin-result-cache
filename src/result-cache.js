@@ -1,9 +1,12 @@
 const express = require('express')
 const objectHash = require('object-hash')
 const pick = require('lodash/pick')
-const app = express()
 
 module.exports = config => {
+  if (!config) {
+    throw new Error('Result cache requires a configuration object')
+  }
+
   if (!config.storage || !config.storage.read || !config.storage.write) {
     throw new Error(
       'Result cache requires a `storage`-parameter which has both a `read` and a `write` function'
@@ -14,6 +17,8 @@ module.exports = config => {
   const storage = config.storage
   const logPipeError = err =>
     logger.error(`Error while piping cached body:\n${err.stack}`)
+
+  const app = express()
 
   app.on('mount', function (parent) {
     this.locals = parent.locals
@@ -48,7 +53,7 @@ module.exports = config => {
       res.writeHead(200, 'OK', cached.headers)
 
       if (cached.body && typeof cached.body.pipe === 'function') {
-        cached.pipe(res).on('error', logPipeError)
+        cached.body.pipe(res).on('error', logPipeError)
       } else {
         res.end(cached.body)
       }
@@ -80,9 +85,7 @@ module.exports = config => {
     try {
       await storage.write(writeParams)
     } catch (err) {
-      if (logger) {
-        logger.error(`Failed to write to result cache:\n${err.stack}`)
-      }
+      logger.error(`Failed to write to result cache:\n${err.stack}`)
     }
   }
 

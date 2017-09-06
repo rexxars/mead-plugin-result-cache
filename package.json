@@ -1,7 +1,8 @@
 {
   "name": "mead-plugin-result-cache",
   "version": "1.0.0",
-  "description": "Caches the result of transformations. Pluggable storage implementation.",
+  "description":
+    "Caches the result of transformations. Pluggable storage implementation.",
   "main": "src/result-cache.js",
   "scripts": {
     "test": "jest"
@@ -10,10 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/rexxars/mead-plugin-result-cache.git"
   },
-  "keywords": [
-    "mead-plugin",
-    "cache"
-  ],
+  "keywords": ["mead-plugin", "cache"],
   "author": "Espen Hovlandsdal <espen@hovlandsdal.com>",
   "license": "MIT",
   "bugs": {
@@ -25,11 +23,15 @@
     "eslint-config-prettier": "^2.4.0",
     "eslint-config-sanity": "^2.1.4",
     "jest": "^21.0.1",
-    "prettier": "^1.6.1"
+    "prettier": "^1.6.1",
+    "supertest": "^3.0.0"
   },
   "dependencies": {
     "express": "^4.15.4",
     "lodash": "^4.17.4",
     "object-hash": "^1.1.8"
+  },
+  "jest": {
+    "collectCoverageFrom": ["src/**/*.js"]
   }
 }
