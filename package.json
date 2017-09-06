@@ -5,7 +5,7 @@
     "Caches the result of transformations. Pluggable storage implementation.",
   "main": "src/result-cache.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest && eslint ."
   },
   "repository": {
     "type": "git",
