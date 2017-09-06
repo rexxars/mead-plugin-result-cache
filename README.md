@@ -12,7 +12,7 @@ npm install --save mead-plugin-result-cache
 
 ## Usage
 
-Your mead configuration file (mead --config <path-to-config.js>):
+Your mead configuration file (`mead --config <path-to-config.js>`):
 
 ```js
 const resultCache = require('mead-plugin-result-cache')
