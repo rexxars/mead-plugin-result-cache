@@ -21,13 +21,14 @@ module.exports = config => {
   const app = express()
 
   app.on('mount', function (parent) {
-    this.locals = parent.locals
+    this.locals = parent.locals || {}
+    this.locals.config = this.locals.config || {}
   })
 
   app.get('/*', async (req, res, next) => {
     const path = req.path.slice(1).split('/')
 
-    if (config.sourceMode === 'path') {
+    if (app.locals.config.sourceMode === 'path') {
       path.shift()
     }
 
