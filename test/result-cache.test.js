@@ -96,6 +96,37 @@ test('cache hits terminate response with returned info', () => {
     .expect(200, 'Cached')
 })
 
+test('cache hits return hit header if includeHitHeaderHint is true', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage, includeHitHeaderHint: true})
+  const app = getApp(pre.handler)
+
+  storage.read.mockReturnValueOnce({
+    body: Buffer.from('Cached'),
+    headers: {'Content-Type': 'text/plain', 'X-Custom': 'moop'}
+  })
+
+  return request(app)
+    .get('/images/foo.jpg?w=200')
+    .expect('Content-Type', 'text/plain')
+    .expect('X-Custom', 'moop')
+    .expect('X-Result-Cache', 'hit')
+    .expect(200, 'Cached')
+})
+
+test('cache misses do not return hit header if includeHitHeaderHint is true', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage, includeHitHeaderHint: true})
+  const app = getApp(pre.handler)
+
+  return request(app)
+    .get('/images/foo.jpg?w=200')
+    .expect(200, 'Default')
+    .then(res => {
+      expect(res.headers).not.toHaveProperty('X-Result-Cache')
+    })
+})
+
 test('cache hits terminate response with returned info (stream)', () => {
   const storage = getMockCache()
   const [pre] = resultCache({storage})

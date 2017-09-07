@@ -79,6 +79,10 @@ Returns a promise, return value is not used. Rejected promises are logged using 
 
 The `logger` parameter takes an object containg logging methods that corresponds to `Log4j` console methods (`console.error`, `console.warn`, `console.info`, `console.debug`, `console.trace`). Defaults to `console`.
 
+## Cache hit hint
+
+You can set the `includeHitHeaderHint` parameter to true in order for the plugin to set a `X-Result-Cache` header on responses that hit the cache. Note that this will *only* be set on hits, not on misses.
+
 ## License
 
 MIT-licensed. See LICENSE.

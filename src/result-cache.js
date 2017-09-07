@@ -15,6 +15,7 @@ module.exports = config => {
 
   const logger = config.logger || console
   const storage = config.storage
+  const includeHitHeaderHint = Boolean(config.includeHitHeaderHint)
   const logPipeError = err =>
     logger.error(`Error while piping cached body:\n${err.stack}`)
 
@@ -58,7 +59,7 @@ module.exports = config => {
 
     // If we have a cached response, send it!
     if (cached) {
-      res.writeHead(200, 'OK', cached.headers)
+      res.writeHead(200, 'OK', addCacheHintHeader(cached.headers, 'hit'))
 
       if (cached.body && typeof cached.body.pipe === 'function') {
         cached.body.pipe(res).on('error', logPipeError)
@@ -99,6 +100,16 @@ module.exports = config => {
     }
   }
 
+  function addCacheHintHeader(headers, value) {
+    if (!includeHitHeaderHint) {
+      return headers
+    }
+
+    return Object.assign({}, headers, {
+      'X-Result-Cache': value
+    })
+  }
+
   return [
     {
       type: 'middleware',
@@ -112,3 +123,4 @@ module.exports = config => {
     }
   ]
 }
+
