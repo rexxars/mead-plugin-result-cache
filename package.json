@@ -1,6 +1,6 @@
 {
   "name": "mead-plugin-result-cache",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Caches the result of transformations. Pluggable storage implementation.",
   "main": "src/result-cache.js",
   "scripts": {
