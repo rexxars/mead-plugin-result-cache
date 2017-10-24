@@ -1,6 +1,6 @@
 {
   "env": {"node": true, "browser": false},
-  "extends": ["prettier", "sanity"],
+  "extends": ["sanity", "prettier"],
   "parserOptions": {
     "ecmaVersion": 2017
   }
