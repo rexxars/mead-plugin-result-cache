@@ -1,6 +1,7 @@
 const express = require('express')
 const objectHash = require('object-hash')
 const pick = require('lodash/pick')
+const pump = require('pump')
 
 module.exports = config => {
   if (!config) {
@@ -16,12 +17,15 @@ module.exports = config => {
   const logger = config.logger || console
   const storage = config.storage
   const includeHitHeaderHint = Boolean(config.includeHitHeaderHint)
-  const logPipeError = err =>
-    logger.error(`Error while piping cached body:\n${err.stack}`)
+  const logPipeError = err => {
+    if (err) {
+      logger.error(`Error while piping cached body:\n${err.stack}`)
+    }
+  }
 
   const app = express()
 
-  app.on('mount', function (parent) {
+  app.on('mount', function(parent) {
     this.locals = parent.locals || {}
     this.locals.config = this.locals.config || {}
   })
@@ -62,7 +66,7 @@ module.exports = config => {
       res.writeHead(200, 'OK', addCacheHintHeader(cached.headers, 'hit'))
 
       if (cached.body && typeof cached.body.pipe === 'function') {
-        cached.body.pipe(res).on('error', logPipeError)
+        pump(cached.body, res, logPipeError)
       } else {
         res.end(cached.body)
       }
@@ -94,9 +98,7 @@ module.exports = config => {
     try {
       await storage.write(writeParams)
     } catch (err) {
-      logger.error(
-        `Failed to write to result cache:\n${err.stack || err.message}`
-      )
+      logger.error(`Failed to write to result cache:\n${err.stack || err.message}`)
     }
   }
 
@@ -123,4 +125,3 @@ module.exports = config => {
     }
   ]
 }
-
