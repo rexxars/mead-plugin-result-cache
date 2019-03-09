@@ -11,7 +11,7 @@ const getApp = middleware => {
     .use(middleware)
     .get('/*', (req, res) => res.send('Default'))
 
-  app.locals.knownQueryParams = ['w', 'h', 'fit']
+  app.locals.knownQueryParams = ['w', 'h', 'fit', 'auto']
   return app
 }
 
@@ -187,4 +187,39 @@ test('logs errors on write', done => {
 
     done()
   })
+})
+
+test('auto=format creates different hash based on accept header (blank)', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage})
+  const app = getApp(pre.handler)
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .expect(200, 'Default')
+    .then(res => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '1cedfee6e413463b212d2f8fb3fe826450dd8d0e',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'default'}
+      })
+    })
+})
+
+test('auto=format creates different hash based on accept header (webp)', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage})
+  const app = getApp(pre.handler)
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .set('Accept', 'image/webp,image/*')
+    .expect(200, 'Default')
+    .then(res => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '22cd718c6f3be48d1ad95134aab51555fe1ff472',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'webp'}
+      })
+    })
 })

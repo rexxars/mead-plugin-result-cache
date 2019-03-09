@@ -47,6 +47,15 @@ module.exports = config => {
       return
     }
 
+    // If we have `auto` set to `format`, we need to create different
+    // keys for different accepted formats (currently only image/webp)
+    if (queryParams.auto === 'format') {
+      const accept = req.headers.accept || ''
+
+      // Signal "internal" to prevent crashing with any future query params
+      queryParams.__autoFormat = accept.includes('image/webp') ? 'webp' : 'default'
+    }
+
     // Create a cache key that is stable regardless of parameter order
     const paramsHash = objectHash(queryParams)
 
