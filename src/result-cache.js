@@ -1,5 +1,6 @@
 const express = require('express')
 const objectHash = require('object-hash')
+const omit = require('lodash/omit')
 const pick = require('lodash/pick')
 const pump = require('pump')
 
@@ -72,12 +73,18 @@ module.exports = config => {
 
     // If we have a cached response, send it!
     if (cached) {
-      res.writeHead(200, 'OK', addCacheHintHeader(cached.headers, 'hit'))
+      const headers = normalizeHeaders(addCacheHintHeader(cached.headers, 'hit'))
+      const vary = headers.vary
+
+      res.set(omit(headers, ['vary']))
+      if (vary) {
+        res.vary(vary)
+      }
 
       if (cached.body && typeof cached.body.pipe === 'function') {
         pump(cached.body, res, logPipeError)
       } else {
-        res.end(cached.body)
+        res.send(cached.body)
       }
 
       return
@@ -99,8 +106,9 @@ module.exports = config => {
       return
     }
 
+    const vary = options.response.getHeader && options.response.getHeader('vary')
     const writeParams = Object.assign({}, params, {
-      headers: options.headers,
+      headers: vary ? Object.assign({vary}, options.headers) : options.headers,
       body: options.body
     })
 
@@ -117,8 +125,15 @@ module.exports = config => {
     }
 
     return Object.assign({}, headers, {
-      'X-Result-Cache': value
+      'x-result-cache': value
     })
+  }
+
+  function normalizeHeaders(headers) {
+    return Object.keys(headers).reduce((set, header) => {
+      set[header.toLowerCase()] = headers[header]
+      return set
+    }, {})
   }
 
   return [

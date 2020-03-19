@@ -6,10 +6,26 @@ const getMockCache = require('./mock-cache')
 const resultCache = require('../')
 
 const noop = () => true
-const getApp = middleware => {
+const getApp = (middleware, storeResult = noop) => {
   const app = express()
+    .use((req, res, next) => {
+      if (req.headers.origin) {
+        res.vary('Origin')
+      }
+      next()
+    })
     .use(middleware)
-    .get('/*', (req, res) => res.send('Default'))
+    .use((req, res, next) => {
+      storeResult({response: res}, next)
+      next()
+    })
+    .get('/*', (req, res) => {
+      if (req.query.auto === 'format') {
+        res.vary('Accept')
+      }
+
+      res.send('Default')
+    })
 
   app.locals.knownQueryParams = ['w', 'h', 'fit', 'auto']
   return app
@@ -39,7 +55,7 @@ test('if there are no transformations to be done, read() is never called', () =>
   return request(app)
     .get('/images/foo.jpg')
     .expect(200, 'Default')
-    .then(res => {
+    .then(() => {
       expect(storage.read).not.toBeCalled()
     })
 })
@@ -52,7 +68,7 @@ test('if there are transformations, read() is called, trigger resize on miss', (
   return request(app)
     .get('/images/foo.jpg?w=200')
     .expect(200, 'Default')
-    .then(res => {
+    .then(() => {
       expect(storage.read).toBeCalledWith({
         urlPath: 'images/foo.jpg',
         paramsHash: '03d62e8fc7b3d1b9179024d97d6f6360a240a48d',
@@ -70,7 +86,7 @@ test('strips source from path if `path` sourcemode is used', () => {
   return request(app)
     .get('/foo/bar/baz.jpg?w=200')
     .expect(200, 'Default')
-    .then(res => {
+    .then(() => {
       expect(storage.read).toBeCalledWith({
         urlPath: 'bar/baz.jpg',
         paramsHash: '03d62e8fc7b3d1b9179024d97d6f6360a240a48d',
@@ -86,12 +102,12 @@ test('cache hits terminate response with returned info', () => {
 
   storage.read.mockReturnValueOnce({
     body: Buffer.from('Cached'),
-    headers: {'Content-Type': 'text/plain', 'X-Custom': 'moop'}
+    headers: {'Content-Type': 'text/plain; charset=iso-8859-1', 'X-Custom': 'moop'}
   })
 
   return request(app)
     .get('/images/foo.jpg?w=200')
-    .expect('Content-Type', 'text/plain')
+    .expect('Content-Type', 'text/plain; charset=iso-8859-1')
     .expect('X-Custom', 'moop')
     .expect(200, 'Cached')
 })
@@ -103,12 +119,12 @@ test('cache hits return hit header if includeHitHeaderHint is true', () => {
 
   storage.read.mockReturnValueOnce({
     body: Buffer.from('Cached'),
-    headers: {'Content-Type': 'text/plain', 'X-Custom': 'moop'}
+    headers: {'Content-Type': 'text/plain; charset=iso-8859-1', 'X-Custom': 'moop'}
   })
 
   return request(app)
     .get('/images/foo.jpg?w=200')
-    .expect('Content-Type', 'text/plain')
+    .expect('Content-Type', 'text/plain; charset=iso-8859-1')
     .expect('X-Custom', 'moop')
     .expect('X-Result-Cache', 'hit')
     .expect(200, 'Cached')
@@ -134,12 +150,12 @@ test('cache hits terminate response with returned info (stream)', () => {
 
   storage.read.mockReturnValueOnce({
     body: fs.createReadStream(__filename),
-    headers: {'Content-Type': 'text/plain', 'X-Custom': 'moop'}
+    headers: {'Content-Type': 'text/plain; charset=iso-8859-1', 'X-Custom': 'moop'}
   })
 
   return request(app)
     .get('/images/foo.jpg?w=200')
-    .expect('Content-Type', 'text/plain')
+    .expect('Content-Type', 'text/plain; charset=iso-8859-1')
     .expect('X-Custom', 'moop')
     .expect(200, fs.readFileSync(__filename, 'utf8'))
 })
@@ -181,9 +197,7 @@ test('logs errors on write', done => {
   post.handler(options, noop)
 
   process.nextTick(() => {
-    expect(logger.error).toHaveBeenCalledWith(
-      `Failed to write to result cache:\n${error.stack}`
-    )
+    expect(logger.error).toHaveBeenCalledWith(`Failed to write to result cache:\n${error.stack}`)
 
     done()
   })
@@ -196,8 +210,9 @@ test('auto=format creates different hash based on accept header (blank)', () => 
 
   return request(app)
     .get('/images/foo.jpg?w=200&auto=format')
+    .expect('Vary', 'Accept')
     .expect(200, 'Default')
-    .then(res => {
+    .then(() => {
       expect(storage.read).toBeCalledWith({
         urlPath: 'images/foo.jpg',
         paramsHash: '1cedfee6e413463b212d2f8fb3fe826450dd8d0e',
@@ -215,11 +230,56 @@ test('auto=format creates different hash based on accept header (webp)', () => {
     .get('/images/foo.jpg?w=200&auto=format')
     .set('Accept', 'image/webp,image/*')
     .expect(200, 'Default')
-    .then(res => {
+    .expect('Vary', 'Accept')
+    .then(() => {
       expect(storage.read).toBeCalledWith({
         urlPath: 'images/foo.jpg',
         paramsHash: '22cd718c6f3be48d1ad95134aab51555fe1ff472',
         queryParams: {w: '200', auto: 'format', __autoFormat: 'webp'}
+      })
+    })
+})
+
+test('merges vary headers (miss)', () => {
+  const storage = getMockCache()
+  const [pre, post] = resultCache({storage})
+  const app = getApp(pre.handler, post.handler)
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .set('Origin', 'https://www.sanity.io')
+    .expect(200, 'Default')
+    .expect('Vary', 'Origin, Accept')
+    .then(() => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '1cedfee6e413463b212d2f8fb3fe826450dd8d0e',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'default'}
+      })
+    })
+})
+
+test('merges vary headers (hit)', () => {
+  const storage = getMockCache()
+  const [pre, post] = resultCache({storage, includeHitHeaderHint: true})
+  const app = getApp(pre.handler, post.handler)
+
+  storage.read.mockReturnValueOnce({
+    body: Buffer.from('Cached'),
+    headers: {'Content-Type': 'text/plain; charset=iso-8859-1', vary: 'Accept'}
+  })
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .set('Origin', 'https://www.sanity.io')
+    .expect(200, 'Cached')
+    .expect('X-Result-Cache', 'hit')
+    .expect('Vary', 'Origin, Accept')
+    .then(() => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '1cedfee6e413463b212d2f8fb3fe826450dd8d0e',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'default'}
       })
     })
 })

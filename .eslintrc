@@ -1,7 +1,10 @@
 {
-  "env": {"node": true, "browser": false},
+  "env": { "node": true, "browser": false },
   "extends": ["sanity", "prettier"],
   "parserOptions": {
     "ecmaVersion": 2017
+  },
+  "rules": {
+    "complexity": ["warn", 15]
   }
 }
