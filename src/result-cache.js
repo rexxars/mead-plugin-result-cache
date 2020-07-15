@@ -2,6 +2,7 @@ const express = require('express')
 const objectHash = require('object-hash')
 const omit = require('lodash/omit')
 const pick = require('lodash/pick')
+const values = require('lodash/values')
 const pump = require('pump')
 
 module.exports = config => {
@@ -29,6 +30,7 @@ module.exports = config => {
   app.on('mount', function(parent) {
     this.locals = parent.locals || {}
     this.locals.config = this.locals.config || {}
+    this.locals.plugins = this.locals.plugins || {}
   })
 
   app.get('/*', async (req, res, next) => {
@@ -38,7 +40,9 @@ module.exports = config => {
       path.shift()
     }
 
-    const urlPath = path.join('/')
+    const urlRewriters = values(app.locals.plugins['url-rewriter'] || {})
+    const urlPath = urlRewriters.reduce((current, rewriter) => rewriter(current), path.join('/'))
+
     const queryParams = pick(req.query, app.locals.knownQueryParams)
     const shouldBeCached = Object.keys(queryParams).length > 0
 

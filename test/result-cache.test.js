@@ -95,6 +95,29 @@ test('strips source from path if `path` sourcemode is used', () => {
     })
 })
 
+test('runs url rewriting plugins, if any', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage})
+  const app = getApp(pre.handler)
+  app.locals.config = {sourceMode: 'path'}
+  app.locals.plugins = {
+    'url-rewriter': {
+      'bar-remover': urlPath => urlPath.replace(/^\/?bar\//g, '')
+    }
+  }
+
+  return request(app)
+    .get('/foo/bar/baz.jpg?w=200')
+    .expect(200, 'Default')
+    .then(() => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'baz.jpg',
+        paramsHash: '03d62e8fc7b3d1b9179024d97d6f6360a240a48d',
+        queryParams: {w: '200'}
+      })
+    })
+})
+
 test('cache hits terminate response with returned info', () => {
   const storage = getMockCache()
   const [pre] = resultCache({storage})
