@@ -122,14 +122,16 @@ module.exports = config => {
       return
     }
 
+    const body = options.body
     const vary = options.response.getHeader && options.response.getHeader('vary')
-    const writeParams = Object.assign({}, params, {
-      headers: vary ? Object.assign({vary}, options.headers) : options.headers,
-      body: options.body
-    })
+    const headers = Object.assign(
+      body ? {'content-length': body.length} : {},
+      vary ? {vary} : {},
+      options.headers
+    )
 
     try {
-      await storage.write(writeParams)
+      await storage.write(Object.assign({}, params, {headers, body}))
     } catch (err) {
       logger.error(`Failed to write to result cache:\n${err.stack || err.message}`)
     }

@@ -131,6 +131,7 @@ test('cache hits terminate response with returned info', () => {
 
   return request(app)
     .get('/images/foo.jpg?w=200')
+    .expect('Content-Length', '6')
     .expect('Content-Type', 'text/plain; charset=iso-8859-1')
     .expect('X-Custom', 'moop')
     .expect(200, 'Cached')
@@ -148,6 +149,7 @@ test('cache hits return hit header if includeHitHeaderHint is true', () => {
 
   return request(app)
     .get('/images/foo.jpg?w=200')
+    .expect('Content-Length', '6')
     .expect('Content-Type', 'text/plain; charset=iso-8859-1')
     .expect('X-Custom', 'moop')
     .expect('X-Result-Cache', 'hit')
@@ -223,6 +225,22 @@ test('logs errors on write', done => {
   process.nextTick(() => {
     expect(logger.error).toHaveBeenCalledWith(`Failed to write to result cache:\n${error.stack}`)
 
+    done()
+  })
+})
+
+test('sets content-length as header when storing result', done => {
+  const storage = getMockCache()
+  const [, post] = resultCache({storage})
+  const resultCacheParams = {}
+  const options = {response: {locals: {resultCacheParams}}, body: Buffer.from('heisann')}
+  post.handler(options, noop)
+
+  process.nextTick(() => {
+    expect(storage.write).toHaveBeenCalledWith({
+      body: Buffer.from('heisann'),
+      headers: {'content-length': 7}
+    })
     done()
   })
 })
