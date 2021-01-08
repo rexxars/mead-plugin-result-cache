@@ -27,6 +27,7 @@ const getApp = (middleware, storeResult = noop) => {
       res.send('Default')
     })
 
+  app.locals.config = {images: {enableAvif: true}}
   app.locals.knownQueryParams = ['w', 'h', 'fit', 'auto']
   return app
 }
@@ -81,7 +82,7 @@ test('strips source from path if `path` sourcemode is used', () => {
   const storage = getMockCache()
   const [pre] = resultCache({storage})
   const app = getApp(pre.handler)
-  app.locals.config = {sourceMode: 'path'}
+  app.locals.config = Object.assign({}, app.locals.config, {sourceMode: 'path'})
 
   return request(app)
     .get('/foo/bar/baz.jpg?w=200')
@@ -99,7 +100,7 @@ test('runs url rewriting plugins, if any', () => {
   const storage = getMockCache()
   const [pre] = resultCache({storage})
   const app = getApp(pre.handler)
-  app.locals.config = {sourceMode: 'path'}
+  app.locals.config = Object.assign({}, app.locals.config, {sourceMode: 'path'})
   app.locals.plugins = {
     'url-rewriter': {
       'bar-remover': urlPath => urlPath.replace(/^\/?bar\//g, '')
@@ -252,6 +253,45 @@ test('auto=format creates different hash based on accept header (webp)', () => {
   return request(app)
     .get('/images/foo.jpg?w=200&auto=format')
     .set('Accept', 'image/webp,image/*')
+    .expect(200, 'Default')
+    .expect('Vary', 'Accept')
+    .then(() => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '22cd718c6f3be48d1ad95134aab51555fe1ff472',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'webp'}
+      })
+    })
+})
+
+test('auto=format creates different hash based on accept header (avif)', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage})
+  const app = getApp(pre.handler)
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .set('Accept', 'image/avif,image/webp,image/*')
+    .expect(200, 'Default')
+    .expect('Vary', 'Accept')
+    .then(() => {
+      expect(storage.read).toBeCalledWith({
+        urlPath: 'images/foo.jpg',
+        paramsHash: '095acbfc83395cc204ba5f362a331d48470345aa',
+        queryParams: {w: '200', auto: 'format', __autoFormat: 'avif'}
+      })
+    })
+})
+
+test('auto=format creates different hash based on accept header (avif disabled)', () => {
+  const storage = getMockCache()
+  const [pre] = resultCache({storage})
+  const app = getApp(pre.handler)
+  app.locals.config = Object.assign({}, app.locals.config, {images: {enableAvif: false}})
+
+  return request(app)
+    .get('/images/foo.jpg?w=200&auto=format')
+    .set('Accept', 'image/avif,image/webp,image/*')
     .expect(200, 'Default')
     .expect('Vary', 'Accept')
     .then(() => {

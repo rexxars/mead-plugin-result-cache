@@ -53,12 +53,24 @@ module.exports = config => {
     }
 
     // If we have `auto` set to `format`, we need to create different
-    // keys for different accepted formats (currently only image/webp)
+    // keys for different accepted formats (image/webp, image/avif)
     if (queryParams.auto === 'format') {
+      const enabled = app.locals.config.images.enableAvif
+        ? ['image/avif', 'image/webp']
+        : ['image/webp']
+
       const accept = req.headers.accept || ''
+      const formats = accept.split(',').map(fm => fm.trim())
+      const preferred = formats.find(fm => enabled.includes(fm))
 
       // Signal "internal" to prevent crashing with any future query params
-      queryParams.__autoFormat = accept.includes('image/webp') ? 'webp' : 'default'
+      queryParams.__autoFormat = 'default'
+
+      if (preferred === 'image/avif') {
+        queryParams.__autoFormat = 'avif'
+      } else if (preferred === 'image/webp') {
+        queryParams.__autoFormat = 'webp'
+      }
     }
 
     // Create a cache key that is stable regardless of parameter order
